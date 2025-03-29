@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "streetsidesoftware.code-spell-checker",
+        "tamasfe.even-better-toml",
+        "rust-lang.rust-analyzer",
+        "barbosshack.crates-io",
+        "belfz.search-crates-io",
+        "conradludgate.rust-playground",
+        "wayou.vscode-todo-highlight",
+        "masonicboom.web-browser"
+    ]
+}

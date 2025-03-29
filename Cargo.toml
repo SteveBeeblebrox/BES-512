@@ -1,6 +1,15 @@
-[package]
-name = "bes-512"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = ["cli", "core"]
 
-[dependencies]
+[workspace.package]
+version = "0.1.0"
+authors = ["Trin Wasinger"]
+edition = "2024"
+
+[workspace.dependencies]
+clap = { version = "4.5.34", features = ["cargo"] }
+bes-512-core = { path = "core" }
+
+[profile.release.package.bes-512-core]
+opt-level=0

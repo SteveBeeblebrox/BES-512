@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.cargo": true,
+        "**/.vscode": true,
+        "target": true,
+        "*.lock": true,
+        "*/Cargo.toml": true
+    }
+}

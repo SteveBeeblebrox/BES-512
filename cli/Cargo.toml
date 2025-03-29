@@ -1,0 +1,9 @@
+[package]
+name = "bes-512-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+clap.workspace = true
+bes-512-core.workspace = true

@@ -3,8 +3,12 @@
         "**/.git": true,
         "**/.cargo": true,
         "**/.vscode": true,
-        "target": true,
-        "*.lock": true,
+        "**/target": true,
+        "**.lock": true,
+        "**/rust-toolchain.toml": true,
         "*/Cargo.toml": true
+    },
+    "rust-analyzer.server.extraEnv": {
+        "RUSTUP_TOOLCHAIN": "nightly"
     }
 }

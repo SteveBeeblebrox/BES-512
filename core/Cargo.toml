@@ -3,3 +3,6 @@ name = "bes-512-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+
+[dependencies]
+konst.workspace = true

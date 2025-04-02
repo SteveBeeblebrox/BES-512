@@ -1,2 +1,5 @@
 [build]
 incremental = true
+
+# Unfortunately, this only works with an absolute path if generating dependency docs too
+rustdocflags = ["--html-in-header=/mnt/c/Users/exodu/Documents/GitHub/bes-512/doc-header.html"]

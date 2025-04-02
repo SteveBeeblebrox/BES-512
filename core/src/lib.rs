@@ -10,6 +10,7 @@ pub fn decrypt() {
 }
 
 
+// Need to use 10...0 padding, PKCS won't work with 512 block
 pub fn pad<const BLOCK_SIZE: usize>(_x: &[u8]) -> [u8; BLOCK_SIZE] {
     todo!("NYI")
 }

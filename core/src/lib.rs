@@ -11,8 +11,8 @@ pub fn decrypt() {
 
 
 // Need to use 10...0 padding, PKCS won't work with 512 block
-pub fn pad<const BLOCK_SIZE: usize>(_x: &[u8]) -> [u8; BLOCK_SIZE] {
-    todo!("NYI")
+pub fn pad(x: impl AsRef<[u8]>, n: usize) -> Box<[u8]> {
+    [x.as_ref(), &[1], vec![0; (n - x.as_ref().len() % n) - 1].as_ref()].concat().into_boxed_slice()
 }
 
 pub fn unpad() {

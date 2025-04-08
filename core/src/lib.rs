@@ -34,4 +34,62 @@ mod tests {
         let result = add(2, 2);
         assert_eq!(result, 4);
     }
+
+    // I don't know if I'm misunderstanding the block, I'm not sure if it's supposed to be adding a full other block at the end
+    #[test]
+    fn pad_fullBlock() {
+       let fullBlock: &[u8] = &[0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08];
+       let output: &[u8] = &[0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00];
+       let result = pad(fullBlock,8);
+       assert_eq!(result.as_ref(),output);
+    }
+    
+    #[test]
+    fn pad_halfFullBlock() {
+       let halfFullBlock: &[u8] = &[0x01,0x02,0x03,0x04];
+       let output: &[u8] = &[0x01,0x02,0x03,0x04,0x80,0x00,0x00,0x00];
+       let result = pad(halfFullBlock,8);
+       assert_eq!(result.as_ref(),output);
+    }
+
+    #[test]
+    fn pad_oddBlock() {
+       let oddBlock: &[u8] = &[0x01,0x02,0x03];
+       let output: &[u8] = &[0x01,0x02,0x03,0x80,0x00,0x00,0x00,0x00];
+       let result = pad(oddBlock,8);
+       assert_eq!(result.as_ref(),output);
+    }
+
+    #[test]
+    fn pad_nMinus1Block() {
+        let nMinus1Block: &[u8] = &[0x01,0x02,0x03,0x04,0x05,0x06,0x07];
+        let output: &[u8] = &[0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x80];
+        let result = pad(nMinus1Block,8);
+        assert_eq!(result.as_ref(),output);
+    }
+
+    #[test]
+    fn pad_emptyBlock() {
+        let emptyBlock: &[u8] = &[];
+        let output: &[u8] = &[0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00];
+        let result = pad(emptyBlock,8);
+        assert_eq!(result.as_ref(),output);   
+    }
+
+    #[test]
+    fn pad_size1Block() {
+        let size1Block: &[u8] = &[0x01];
+        let output: &[u8] = &[0x01,0x80,0x00,0x00,0x00,0x00,0x00,0x00];
+        let result = pad(size1Block,8);
+        assert_eq!(result.as_ref(),output);   
+    }
+
+    #[test]
+    fn unpad_size1Block() {
+        let output: &[u8] = &[0x01];
+        let size1Block: &[u8] = &[0x01,0x80,0x00,0x00,0x00,0x00,0x00,0x00];
+        let result = unpad(size1Block);
+        assert_eq!(result.as_ref(),output);
+    }
+
 }

@@ -142,6 +142,8 @@ class Block:
         t = Block()
         for r in range(4):
             for c in range(4):
+                print(f'''({r},{c}) = SUM {''.join(f'({M[r][i]:02x}*{self[i,c]:02x}) ' for i in range(4))}''')
+
                 t[r,c] = gfsum([gfmul(M[r][i], self[i,c]) for i in range(4)])
 
         self.value = t.value

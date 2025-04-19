@@ -28,8 +28,7 @@ fn main() -> Result<(), Error> {
             let katex: String = format!("{}/katex.html", std::env::var("CARGO_WORKSPACE_DIR").unwrap_or(String::from("..")));
             std::process::Command::new("cargo")
                 .arg("doc")
-                .env("RUSTDOCFLAGS", format!(
-                    "--html-in-header={}", std::fs::canonicalize(&katex).ok().and_then(|p| p.into_os_string().into_string().ok()).unwrap()))
+                .env("RUSTDOCFLAGS", format!("--html-in-header={}", std::fs::canonicalize(&katex).ok().and_then(|p| p.into_os_string().into_string().ok()).unwrap()))
                 .status().map(|s| s.exit_ok().ok())
                 .expect("Failed to run `cargo doc`");
         }

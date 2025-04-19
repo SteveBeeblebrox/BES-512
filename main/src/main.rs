@@ -107,5 +107,5 @@
 
 
 fn main() {
-	bes_512_core::encrypt();
+	bes_512_core::run();
 }

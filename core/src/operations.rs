@@ -6,6 +6,7 @@ impl<const N: usize> ConstSqrt<N> {
     const SQRT: usize = N.isqrt();
 }
 
+#[inline(always)]
 pub(crate) const fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const ROUNDS: usize>(key: &[u8; KEY_SIZE]) where [(); BLOCK_SIZE*(1+ROUNDS)]: {
     let mut s= [0u8; BLOCK_SIZE*(1+ROUNDS)];
     for_range!(n in 0..KEY_SIZE => {
@@ -54,8 +55,6 @@ pub(crate) const fn sub_bytes<'a, 'b, const BLOCK_SIZE: usize>(bytes: &'a mut [u
     return bytes;
 }
 
-
-
 #[allow(non_snake_case)]
 #[allow(private_interfaces)]
 pub(crate) mod direction {
@@ -73,6 +72,7 @@ pub(crate) mod direction {
     impl DirectionTy for Right {
         const VALUE: DirectionEnum = DirectionEnum::Right;
     }
+    #[inline(always)]
     pub(super) const fn shift_offset<DIRECTION: DirectionTy>(lhs: usize, rhs: usize) -> usize {
         match DIRECTION::VALUE {
             DirectionEnum::Left => lhs - rhs,

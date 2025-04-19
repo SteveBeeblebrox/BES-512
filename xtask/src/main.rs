@@ -2,6 +2,7 @@
 use clap::{Command,Arg,ArgAction};
 use anyhow::Error;
 
+/// See https://github.com/matklad/cargo-xtask
 fn main() -> Result<(), Error> {
     let matches = Command::new("xtask")
         .version(clap::crate_version!())

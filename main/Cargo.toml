@@ -3,6 +3,7 @@ name = "bes-512"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
+default-run = "bes-512"
 
 [dependencies]
 clap.workspace = true

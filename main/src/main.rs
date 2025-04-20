@@ -103,7 +103,6 @@ fn main() -> Result<(), Error> {
 			.ignore_case(true)
 			.default_value(Into::<&str>::into(CipherMode::default()))
 			.help("Set mode of operation")
-
 		)
 
 		.arg(Arg::new("iv")

@@ -57,7 +57,7 @@ pub fn run() {
     println!("{:02x?}", &keys[32..48]);
     println!("{:02x?}", &keys[48..64]);
     println!("...");
-    println!("{:02x?}", &keys[176-16..]);
+    println!("{:02x?}", &keys[keys.len()-16..]);
     println!("({})", keys.len());
 
     println!();
@@ -74,9 +74,24 @@ pub fn run() {
     println!("{:02x?}", &keys[32..48]);
     println!("{:02x?}", &keys[48..64]);
     println!("...");
-    println!("{:02x?}", &keys[208-16..]);
+    println!("{:02x?}", &keys[keys.len()-16..]);
     println!("({})", keys.len());
     // https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.197.pdf
+
+    println!();
+    println!();
+    println!();
+
+    let k512 = [0 ; 512/8];
+    let keys = crate::operations::key_schedule::<{512/8}, {512/8}, 10>(&k512);
+    println!("{:02x?}", &keys[0..64]);
+    println!("{:02x?}", &keys[64..128]);
+    println!("{:02x?}", &keys[126..192]);
+    println!("{:02x?}", &keys[192..256]);
+    println!("...");
+    println!("{:02x?}", &keys[keys.len()-64..]);
+    println!("({})", keys.len());
+
     // let mut block = 0x000102030405060708090a0b0c0d0e0f_u128.to_be_bytes();
     // let round_key = 0x01010101010101010101010101010101_u128.to_be_bytes();
 
@@ -88,5 +103,4 @@ pub fn run() {
     // decryption_round(&mut block, &round_key, &AES_INV_MIX_COLUMNS_MATRIX);
 
     // print_mtx!(block);
-
 }

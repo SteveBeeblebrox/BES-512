@@ -7,26 +7,9 @@ impl<const N: usize> ConstSqrt<N> {
 }
 
 #[inline(always)]
-pub(crate) fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const ROUNDS: usize>(key: &[u8; KEY_SIZE]) -> [u8; BLOCK_SIZE*(1+ROUNDS)] where [u8; BLOCK_SIZE*(1+ROUNDS)]: {
+pub(crate) const fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const ROUNDS: usize>(key: &[u8; KEY_SIZE]) -> [u8; BLOCK_SIZE*(1+ROUNDS)] where [u8; BLOCK_SIZE*(1+ROUNDS)]: {
     let mut s= [0u8; BLOCK_SIZE*(1+ROUNDS)];
-    for_range!(n in 0..4*BLOCK_SIZE => {
-        if n < KEY_SIZE {
-            print!(" k0 ");
-        } else if n % KEY_SIZE == 0 {
-            print!(" RC ");
-        } else if n % KEY_SIZE < ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
-            print!(" .. ");
-        } else if n % KEY_SIZE == ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
-            print!(" << ");
-        } else {
-            print!(" ^^ ");
-        }
-
-        if (n+1) % BLOCK_SIZE == 0 {
-            println!();
-        }
-    });
-
+    
     for_range!(n in 0..BLOCK_SIZE*(1+ROUNDS) => {
         s[n] = if n < KEY_SIZE {
             key[n]
@@ -44,6 +27,7 @@ pub(crate) fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const
     return s;
 }
 
+#[inline(always)]
 pub(crate) const fn xtime(f: u8) -> u8 {
     (f << 1) ^ if f & 0b10000000 == 0 {
         0
@@ -52,12 +36,22 @@ pub(crate) const fn xtime(f: u8) -> u8 {
     }
 }
 
+#[inline(always)]
 pub(crate) const fn transpose<const N: usize>(matrix: [u8; N]) -> [u8; N] {
     let mut t = [0; N];
     for_range!(r in 0..ConstSqrt::<N>::SQRT => {
         for_range!(c in 0..ConstSqrt::<N>::SQRT => {
             t[c + r*ConstSqrt::<N>::SQRT] = matrix[r + c*ConstSqrt::<N>::SQRT];
         });
+    });
+    return t;
+}
+
+#[inline(always)]
+pub(crate) const fn take_fixed<const LENGTH: usize>(bytes: &[u8], offset: usize) -> [u8; LENGTH] {
+    let mut t = [0; LENGTH];
+    for_range!(n in 0..LENGTH => {
+        t[n] = bytes[n+offset];
     });
     return t;
 }
@@ -103,7 +97,6 @@ pub(crate) mod direction {
         }
     }
 }
-
 
 #[allow(private_bounds)]
 #[inline(always)]

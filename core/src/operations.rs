@@ -1,4 +1,4 @@
-use crate::constants::{S_BOX,GF_MUL};
+use crate::constants::{S_BOX,GF_MUL,RCON};
 use konst::for_range;
 
 struct ConstSqrt<const N: usize>;
@@ -7,17 +7,41 @@ impl<const N: usize> ConstSqrt<N> {
 }
 
 #[inline(always)]
-pub(crate) const fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const ROUNDS: usize>(key: &[u8; KEY_SIZE]) where [(); BLOCK_SIZE*(1+ROUNDS)]: {
+pub(crate) fn key_schedule<const BLOCK_SIZE: usize, const KEY_SIZE: usize, const ROUNDS: usize>(key: &[u8; KEY_SIZE]) -> [u8; BLOCK_SIZE*(1+ROUNDS)] where [u8; BLOCK_SIZE*(1+ROUNDS)]: {
     let mut s= [0u8; BLOCK_SIZE*(1+ROUNDS)];
-    for_range!(n in 0..KEY_SIZE => {
-        s[n] = key[n];
+    for_range!(n in 0..4*BLOCK_SIZE => {
+        if n < KEY_SIZE {
+            print!(" k0 ");
+        } else if n % KEY_SIZE == 0 {
+            print!(" RC ");
+        } else if n % KEY_SIZE < ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
+            print!(" .. ");
+        } else if n % KEY_SIZE == ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
+            print!(" << ");
+        } else {
+            print!(" ^^ ");
+        }
+
+        if (n+1) % BLOCK_SIZE == 0 {
+            println!();
+        }
     });
 
+    for_range!(n in 0..BLOCK_SIZE*(1+ROUNDS) => {
+        s[n] = if n < KEY_SIZE {
+            key[n]
+        } else if n % KEY_SIZE == 0 {
+            S_BOX[s[n - ConstSqrt::<BLOCK_SIZE>::SQRT + 1] as usize] ^ RCON[n/KEY_SIZE - 1] ^ s[n-KEY_SIZE]
+        } else if n % KEY_SIZE < ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
+            S_BOX[s[n - ConstSqrt::<BLOCK_SIZE>::SQRT + 1] as usize] ^ s[n-KEY_SIZE]
+        } else if n % KEY_SIZE == ConstSqrt::<BLOCK_SIZE>::SQRT - 1 {
+            S_BOX[s[n - 2*ConstSqrt::<BLOCK_SIZE>::SQRT + 1] as usize] ^ s[n-KEY_SIZE]
+        } else {
+            s[n - ConstSqrt::<BLOCK_SIZE>::SQRT] ^  s[n - KEY_SIZE]
+        }
+    });
     
-
-
-    
-    unimplemented!();
+    return s;
 }
 
 pub(crate) const fn xtime(f: u8) -> u8 {
@@ -55,7 +79,6 @@ pub(crate) const fn sub_bytes<'a, 'b, const BLOCK_SIZE: usize>(bytes: &'a mut [u
     return bytes;
 }
 
-#[allow(non_snake_case)]
 #[allow(private_interfaces)]
 pub(crate) mod direction {
     enum DirectionEnum {

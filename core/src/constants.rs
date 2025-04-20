@@ -1,7 +1,7 @@
 use crate::operations::{transpose, xtime};
 use konst::for_range;
 
-pub const ROUND_CONSTANTS: [u8;51] = {
+pub const RCON: [u8;51] = {
     let mut t = [1u8; 51];
     for_range!(n in 1..51 => {
         t[n] = xtime(t[n-1]);

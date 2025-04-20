@@ -4,7 +4,7 @@
 use konst::for_range;
 
 mod constants;
-use crate::constants::{AES_MIX_COLUMNS_MATRIX,S_BOX,INV_S_BOX,BES_MIX_COLUMNS_MATRIX,ROUND_CONSTANTS,AES_INV_MIX_COLUMNS_MATRIX};
+use crate::constants::{AES_MIX_COLUMNS_MATRIX,S_BOX,INV_S_BOX,BES_MIX_COLUMNS_MATRIX,AES_INV_MIX_COLUMNS_MATRIX};
 
 mod operations;
 use crate::operations::{direction,add_round_key, sub_bytes, shift_rows, mix_columns};
@@ -50,10 +50,33 @@ fn decryption_round<'a, 'b, 'c, const BLOCK_SIZE: usize>(block: &'a mut [u8; BLO
     block
 }
 
-
-
-
 pub fn run() {
+    let keys = crate::operations::key_schedule::<{128/8},{128/8}, 10>(&0x0f1571c9_47d9e859_0cb7add6_af7f6798_u128.to_be_bytes());
+    println!("{:02x?}", &keys[0..16]);
+    println!("{:02x?}", &keys[16..32]);
+    println!("{:02x?}", &keys[32..48]);
+    println!("{:02x?}", &keys[48..64]);
+    println!("...");
+    println!("{:02x?}", &keys[176-16..]);
+    println!("({})", keys.len());
+
+    println!();
+    println!();
+    println!();
+
+    let mut k192 = [0; 192/8];
+    k192[..64/8].copy_from_slice(&0x_8e73b0f7_da0e6452_u64.to_be_bytes());
+    k192[64/8..].copy_from_slice(&0x_c810f32b_809079e5_62f8ead2_522c6b7bu128.to_be_bytes());
+
+    let keys = crate::operations::key_schedule::<{128/8}, {192/8}, 12>(&k192);
+    println!("{:02x?}", &keys[0..16]);
+    println!("{:02x?}", &keys[16..32]);
+    println!("{:02x?}", &keys[32..48]);
+    println!("{:02x?}", &keys[48..64]);
+    println!("...");
+    println!("{:02x?}", &keys[208-16..]);
+    println!("({})", keys.len());
+    // https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.197.pdf
     // let mut block = 0x000102030405060708090a0b0c0d0e0f_u128.to_be_bytes();
     // let round_key = 0x01010101010101010101010101010101_u128.to_be_bytes();
 

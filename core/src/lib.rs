@@ -6,6 +6,11 @@ use konst::for_range;
 mod constants;
 use crate::constants::{S_BOX,INV_S_BOX};
 
+pub use crate::constants::{
+    AES_MIX_COLUMNS_MATRIX,AES_INV_MIX_COLUMNS_MATRIX,
+    WHIRLPOOL_MIX_COLUMNS_MATRIX,WHIRLPOOL_INV_MIX_COLUMNS_MATRIX
+};
+
 mod operations;
 use crate::operations::{
     direction, key_schedule, take_fixed,

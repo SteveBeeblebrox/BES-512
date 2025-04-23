@@ -9,4 +9,5 @@ default-run = "bes-512"
 clap.workspace = true
 strum.workspace = true
 anyhow.workspace = true
+velcro.workspace = true
 bes-512-core.workspace = true

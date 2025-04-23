@@ -1,8 +1,10 @@
+#![feature(buf_read_has_data_left)]
 use bes_512::{aes_128,aes_192,aes_256};
 use clap::{Command,Arg,ArgAction,ValueEnum};
 use strum::IntoStaticStr;
 use anyhow::{Error,Context as _};
-use std::io::{Read,Write};
+use std::io::{BufRead as _, Read, Write};
+use velcro::vec;
 
 mod experiments;
 
@@ -24,25 +26,24 @@ enum Cipher {
 #[value(rename_all = "kebab-case")]
 #[non_exhaustive]
 enum CipherMode {
+	#[default]
 	Block,
-	#[default] CBC
+	CBC
 }
 
-fn get_bytes<const KEY_SIZE: usize>(text: impl AsRef<str>) -> Result<[u8; KEY_SIZE], Error> {
+fn get_bytes<const SIZE: usize>(text: impl AsRef<str>) -> Result<[u8; SIZE], Error> {
 	let mut bytes= match text.as_ref().trim().strip_prefix("0x") {
-        Some(key) => {
-            key.as_bytes().chunks(2).map(|x| u8::from_str_radix(str::from_utf8(x).unwrap(),16).map_err(Error::new)).collect::<Result<Vec<u8>,Error>>().with_context(|| format!("Invalid hexadecimal digit in key '{}'", key))
-        },
+        Some(key) => key.as_bytes().chunks(2).map(|x| u8::from_str_radix(str::from_utf8(x).unwrap(),16).map_err(Error::new)).collect::<Result<Vec<u8>,Error>>().with_context(|| format!("Invalid hexadecimal digit in key '{}'", key)),
         _ => std::fs::read(text.as_ref()).with_context(|| format!("Failed to read bytes from {}", text.as_ref()))
     }?;
 
 	let len = bytes.len();
 
-	if len < KEY_SIZE {
-		bytes.resize(KEY_SIZE, 0);
+	if len < SIZE {
+		bytes.resize(SIZE, 0);
 	}
 	
-	return bytes.try_into().map_err(|_| Error::msg("Failed to read bytes")).with_context(|| format!("Expected {KEY_SIZE} bytes but got {len}"));
+	return bytes.try_into().map_err(|_| Error::msg("Failed to read bytes")).with_context(|| format!("Expected {SIZE} bytes but got {len}"));
 }
 
 fn main() -> Result<(), Error> {
@@ -107,7 +108,7 @@ fn main() -> Result<(), Error> {
 
 		.arg(Arg::new("iv")
 			.long("iv")
-			.short('I')
+			.short('i')
 			.value_name("HEX | PATH")
 			.default_value("0x0")
 			.help("Set IV")
@@ -115,7 +116,7 @@ fn main() -> Result<(), Error> {
 
 		.arg(Arg::new("input")
 			.long("in")
-			.short('i')
+			.short('I')
 			.value_name("PATH")
 			.default_value("-")
 			.help("Set input (\"-\" for stdin)")
@@ -123,7 +124,7 @@ fn main() -> Result<(), Error> {
 
 		.arg(Arg::new("output")
 			.long("out")
-			.short('o')
+			.short('O')
 			.value_name("PATH")
 			.default_value("-")
 			.help("Set output (\"-\" for stdout)")
@@ -141,6 +142,7 @@ fn main() -> Result<(), Error> {
 	let _verbose: u8 = matches.get_count("verbose");
 	
 	let key: &String = matches.get_one::<String>("key").unwrap();
+	let iv: &String = matches.get_one::<String>("iv").unwrap();
 
 	let input: &mut Box<dyn Read> = &mut match matches.get_one::<String>("input").map(|s| s.as_str()).unwrap_or("-") {
 		"-" => Box::new(std::io::stdin()),
@@ -149,16 +151,16 @@ fn main() -> Result<(), Error> {
 
 	let output: &mut Box<dyn Write> = &mut match matches.get_one::<String>("output").map(|s| s.as_str()).unwrap_or("-") {
 		"-" => Box::new(std::io::stdout()),
-		s => Box::new(std::fs::File::open(s)?)
+		s => Box::new(std::fs::OpenOptions::new().create_new(true).write(true).open(s)?)
 	};
 
 	// if verbose > 0 {
-	// 	println!("Verbose: {}", verbose > 0);
-	// 	println!("Action:  {}", matches.get_one::<String>("action").unwrap());
-	// 	println!("Cipher:  {}", Into::<&str>::into(matches.get_one::<Cipher>("cipher").unwrap()));
-	// 	println!("Mode:    {}", Into::<&str>::into(matches.get_one::<CipherMode>("mode").unwrap()));
-	// 	println!("Input:   {}", matches.get_one::<String>("input").unwrap());
-	// 	println!("Output:  {}", matches.get_one::<String>("output").unwrap());
+	// 	eprintln!("Verbose: {}", verbose > 0);
+	// 	eprintln!("Action:  {}", matches.get_one::<String>("action").unwrap());
+	// 	eprintln!("Cipher:  {}", Into::<&str>::into(matches.get_one::<Cipher>("cipher").unwrap()));
+	// 	eprintln!("Mode:    {}", Into::<&str>::into(matches.get_one::<CipherMode>("mode").unwrap()));
+	// 	eprintln!("Input:   {}", matches.get_one::<String>("input").unwrap());
+	// 	eprintln!("Output:  {}", matches.get_one::<String>("output").unwrap());
 	// }
 
 	match (
@@ -173,8 +175,19 @@ fn main() -> Result<(), Error> {
 		("enc", Cipher::AES_256, CipherMode::Block) => block_cipher(input, output, key, aes_256::encrypt)?,
 		("dec", Cipher::AES_256, CipherMode::Block) => block_cipher(input, output, key, aes_256::decrypt)?,
 
-		("enc", Cipher::BES_512, CipherMode::Block) => block_cipher(input, output, key, experiments::encrypt_with_variable_rounds(matches.get_one::<u8>("override-bes-512-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
-		("dec", Cipher::BES_512, CipherMode::Block) => block_cipher(input, output, key, experiments::decrypt_with_variable_rounds(matches.get_one::<u8>("override-bes-512-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
+		("enc", Cipher::BES_512, CipherMode::Block) => block_cipher(input, output, key, experiments::encrypt_with_variable_rounds(matches.get_one::<u8>("bes-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
+		("dec", Cipher::BES_512, CipherMode::Block) => block_cipher(input, output, key, experiments::decrypt_with_variable_rounds(matches.get_one::<u8>("bes-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
+
+		("enc", Cipher::AES_128, CipherMode::CBC) => cbc_encrypt(input, output, key, iv, aes_128::encrypt)?,
+		("dec", Cipher::AES_128, CipherMode::CBC) => cbc_decrypt(input, output, key, iv, aes_128::decrypt)?,
+		("enc", Cipher::AES_192, CipherMode::CBC) => cbc_encrypt(input, output, key, iv, aes_192::encrypt)?,
+		("dec", Cipher::AES_192, CipherMode::CBC) => cbc_decrypt(input, output, key, iv, aes_192::decrypt)?,
+		("enc", Cipher::AES_256, CipherMode::CBC) => cbc_encrypt(input, output, key, iv, aes_256::encrypt)?,
+		("dec", Cipher::AES_256, CipherMode::CBC) => cbc_decrypt(input, output, key, iv, aes_256::decrypt)?,
+
+		("enc", Cipher::BES_512, CipherMode::CBC) => cbc_encrypt(input, output, key, iv, experiments::encrypt_with_variable_rounds(matches.get_one::<u8>("bes-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
+		("dec", Cipher::BES_512, CipherMode::CBC) => cbc_decrypt(input, output, key, iv, experiments::decrypt_with_variable_rounds(matches.get_one::<u8>("bes-rounds").map(|r| *r).unwrap_or(bes_512::ROUNDS as u8)))?,
+
 
 		_ => Err(Error::msg("Unsupported argument configuration!"))?
 	}
@@ -184,9 +197,80 @@ fn main() -> Result<(), Error> {
 
 
 fn block_cipher<const BLOCK_SIZE: usize, const KEY_SIZE: usize>(input: &mut Box<dyn Read>, output: &mut Box<dyn Write>, key: &String, cipher: bes_512::CipherFunciton<BLOCK_SIZE, KEY_SIZE>) -> Result<(), Error> {
-	let mut buf: Vec<u8> = vec![];
+	let mut buf: Vec<u8> = Vec::with_capacity(BLOCK_SIZE);
 	input.read_to_end(&mut buf)?;
 	let len = buf.len();
-	output.write_all(cipher(&mut buf.try_into().map_err(|_| Error::msg("Failed to read bytes")).with_context(|| format!("Expected {} bytes but got {}", BLOCK_SIZE, len))?, &get_bytes(key)?))?;
+	output.write_all(cipher(&mut buf.try_into().map_err(|_| Error::msg("Failed to read bytes")).with_context(|| format!("Expected {} bytes but got {}", BLOCK_SIZE, len))?, &get_bytes(key).context("Bad key size")?))?;
+	return Ok(());
+}
+
+fn cbc_encrypt<const BLOCK_SIZE: usize, const KEY_SIZE: usize>(input: &mut Box<dyn Read>, output: &mut Box<dyn Write>, key: &String, iv: &String, cipher: bes_512::CipherFunciton<BLOCK_SIZE, KEY_SIZE>) -> Result<(), Error> {
+	let mut buf: Vec<u8> = Vec::with_capacity(BLOCK_SIZE);
+	let key: &[u8; KEY_SIZE] = &get_bytes(key).context("Bad key size")?;
+	let mut iv: [u8; BLOCK_SIZE] = get_bytes(iv).context("Bad iv size")?;
+	
+	let input: &mut std::io::BufReader<&mut Box<dyn Read>> = &mut std::io::BufReader::new(input);
+
+	while input.has_data_left()? {
+		let bytes = input.take(BLOCK_SIZE.try_into()?).read_to_end(&mut buf)?;
+		if bytes < BLOCK_SIZE {
+			buf.append(&mut vec![0x80, ..vec![0; BLOCK_SIZE - bytes - 1]]);
+		} else if !input.has_data_left()? {
+			buf.append(&mut vec![0x80, ..vec![0x00; const {BLOCK_SIZE - 1}]]);
+		}
+
+		while !buf.is_empty() {
+			iv = *cipher(
+				&mut buf
+					.drain(0..BLOCK_SIZE)
+					.into_iter()
+					.zip(iv)
+					.map(|(byte, iv)| byte ^ iv)
+					.collect::<Vec<_>>()
+					.try_into()
+					.map_err(|_| Error::msg("Unexpected size"))?,
+				key
+			);
+			output.write(&iv)?;
+		}
+	}
+
+	output.flush()?;
+
+	return Ok(());
+}
+
+
+fn cbc_decrypt<const BLOCK_SIZE: usize, const KEY_SIZE: usize>(input: &mut Box<dyn Read>, output: &mut Box<dyn Write>, key: &String, iv: &String, cipher: bes_512::CipherFunciton<BLOCK_SIZE, KEY_SIZE>) -> Result<(), Error> {
+	let mut buf: Vec<u8> = Vec::with_capacity(BLOCK_SIZE);
+	let key: &[u8; KEY_SIZE] = &get_bytes(key).context("Bad key size")?;
+	let mut iv: [u8; BLOCK_SIZE] = get_bytes(iv).context("Bad iv size")?;
+	
+	let input: &mut std::io::BufReader<&mut Box<dyn Read>> = &mut std::io::BufReader::new(input);
+
+	while input.has_data_left()? {
+		let _bytes = input.take(BLOCK_SIZE.try_into()?).read_to_end(&mut buf)?;
+		
+		while !buf.is_empty() {
+			let block: [u8; BLOCK_SIZE] = buf
+				.drain(0..BLOCK_SIZE)
+				.collect::<Vec<_>>()
+				.try_into()
+				.map_err(|_| Error::msg("Unexpected size"))?
+			;
+	
+			let buf = cipher(&mut block.clone(), key).iter().zip(iv).map(|(byte, iv)| byte ^ iv).collect::<Vec<_>>();
+			iv = block;
+
+			if !input.has_data_left()? {
+				output.write(&buf[..buf.iter().rposition(|&b| b == 0x80).context("Data is missing padding")?])?;
+			} else {
+				output.write(&buf)?;
+			}
+		}
+	}
+
+	output.flush()?;
+
 	return Ok(());
 }

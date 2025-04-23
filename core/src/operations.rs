@@ -73,6 +73,42 @@ pub(crate) const fn sub_bytes<'a, 'b, const BLOCK_SIZE: usize>(bytes: &'a mut [u
     return bytes;
 }
 
+// See https://en.wikipedia.org/wiki/Binary_GCD_algorithm
+#[inline(always)]
+const fn gcd(mut u: usize, mut v: usize) -> usize {
+    const fn min(v1: usize, v2: usize) -> usize {
+        if v2 < v1 {
+            v2
+        } else {
+            v1
+        }
+    }
+    
+    if u == 0 {
+        return v;
+    } else if v == 0 {
+        return u;
+    }
+
+    let i = u.trailing_zeros() as usize;  u >>= i;
+    let j = v.trailing_zeros() as usize;  v >>= j;
+    let k = min(i, j);
+
+    loop {
+        if u > v {
+            std::mem::swap(&mut u, &mut v);
+        }
+
+        v -= u;
+
+        if v == 0 {
+            return u << k;
+        }
+
+        v >>= v.trailing_zeros();
+    }
+}
+
 #[allow(private_interfaces)]
 pub(crate) mod direction {
     enum DirectionEnum {
@@ -102,21 +138,13 @@ pub(crate) mod direction {
 #[inline(always)]
 pub(crate) const fn shift_rows<DIRECTION: direction::DirectionTy, const BLOCK_SIZE: usize>(bytes: &mut [u8; BLOCK_SIZE]) -> &mut [u8; BLOCK_SIZE] {
     for_range!(r in 1..ConstSqrt::<BLOCK_SIZE>::SQRT => {
-        if r % 2 == 0 {
-            let mut t: u8 = bytes[r]; /* (r, 0) */
-            for_range!(n in 0..ConstSqrt::<BLOCK_SIZE>::SQRT/2 => {
-                std::mem::swap(&mut t, &mut bytes[(r + direction::shift_offset::<DIRECTION>(ConstSqrt::<BLOCK_SIZE>::SQRT, (n + 1)*r%ConstSqrt::<BLOCK_SIZE>::SQRT)*ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]); /* (r, ConstMath::<N>::SQRT - (n + 1)*r%ConstMath::<N>::SQRT) */
+        let psi = gcd(ConstSqrt::<BLOCK_SIZE>::SQRT,r);
+        for_range!(d in 0..psi => {
+            let mut t: u8 = bytes[(r + d*ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]; /* (r, d) */
+            for_range!(n in 0..ConstSqrt::<BLOCK_SIZE>::SQRT/psi => {
+                std::mem::swap(&mut t, &mut bytes[(r + ((direction::shift_offset::<DIRECTION>(ConstSqrt::<BLOCK_SIZE>::SQRT, (n + 1)*r%ConstSqrt::<BLOCK_SIZE>::SQRT) + d)%ConstSqrt::<BLOCK_SIZE>::SQRT)*ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]); /* (r, (ConstMath::<N>::SQRT - (n + 1)*r + d)%ConstMath::<N>::SQRT) */
             });
-            let mut t: u8 = bytes[(r + ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]; /* (r, 1) */
-            for_range!(n in 0..ConstSqrt::<BLOCK_SIZE>::SQRT/2 => {
-                std::mem::swap(&mut t, &mut bytes[(r + ((direction::shift_offset::<DIRECTION>(ConstSqrt::<BLOCK_SIZE>::SQRT, (n + 1)*r) + 1)%ConstSqrt::<BLOCK_SIZE>::SQRT)*ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]); /* (r, (ConstMath::<N>::SQRT - (n + 1)*r + 1)%ConstMath::<N>::SQRT) */
-            });
-        } else {
-            let mut t: u8 = bytes[r]; /* (r, 0) */
-            for_range!(n in 0..ConstSqrt::<BLOCK_SIZE>::SQRT => {
-                std::mem::swap(&mut t, &mut bytes[(r + direction::shift_offset::<DIRECTION>(ConstSqrt::<BLOCK_SIZE>::SQRT, (n + 1)*r%ConstSqrt::<BLOCK_SIZE>::SQRT)*ConstSqrt::<BLOCK_SIZE>::SQRT)%BLOCK_SIZE]); /* (r, ConstMath::<N>::SQRT - (n + 1)*r%ConstMath::<N>::SQRT) */
-            });
-        }
+        });
     });
 
     return bytes;

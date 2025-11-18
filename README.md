@@ -1,4 +1,4 @@
-See [BES-512.pdf](BES-512.pdf)
+See [BES-512.pdf](BES-512.pdf) and branch [trin-main](https://github.com/SteveBeeblebrox/BES-512/tree/trin-dev)
 <!-- https://www.rust-lang.org/tools/install -->
 <!-- https://stackoverflow.com/questions/46495063/how-to-write-math-formulas-for-rust-documentation -->
 <!-- https://crates.io/crates/haybale-pitchfork -->
